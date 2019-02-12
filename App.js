@@ -8,7 +8,28 @@
  */
 
 import React, {Component} from 'react';
-import {Platform, StyleSheet, Text, View} from 'react-native';
+import {Platform, StyleSheet, Text, View, Alert} from 'react-native';
+
+if (!window.location) {
+  window.navigator.userAgent = 'ReactNative'
+}
+
+const io = require('socket.io-client')
+const WebRTC = require('react-native-webrtc');
+const {
+  RTCPeerConnection,
+  RTCIceCandidate,
+  RTCSessionDescription,
+  RTCView,
+  MediaStream,
+  MediaStreamTrack,
+  getUserMedia,
+} = WebRTC;
+
+const socket = io('http://192.168.3.160:3000')
+socket.on('custom error', error => {
+  Alert.alert('error', error)
+})
 
 const instructions = Platform.select({
   ios: 'Press Cmd+R to reload,\n' + 'Cmd+D or shake for dev menu',
@@ -22,6 +43,7 @@ export default class App extends Component<Props> {
   render() {
     return (
       <View style={styles.container}>
+        
         <Text style={styles.welcome}>Welcome to React Native!</Text>
         <Text style={styles.instructions}>To get started, edit App.js</Text>
         <Text style={styles.instructions}>{instructions}</Text>
