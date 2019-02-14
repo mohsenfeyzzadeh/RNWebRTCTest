@@ -20,7 +20,9 @@ import {
 } from 'react-native-webrtc';
 import io from 'socket.io-client'
 
-const socket = io('http://192.168.3.160:3000')
+import {ip, port} from './js/config/config'
+
+const socket = io('http://' + ip + ':' + port)
 socket.on('custom error', error => {
   Alert.alert('error', error)
 })
@@ -34,6 +36,7 @@ export default class App extends Component<Props> {
     this.state = {
       join_disabled: true,
       call_disabled: true,
+      leave_disabled: true,
       room_name: '',
       local_stream_url: '',
       remote_stream_url: ''
@@ -41,7 +44,9 @@ export default class App extends Component<Props> {
 
     this.join = this.join.bind(this)
     this.call = this.call.bind(this)
+    this.leave = this.leave.bind(this)
     this.handleJoinSuccess = this.handleJoinSuccess.bind(this)
+    this.handleBeLeft = this.handleBeLeft.bind(this)
   }
 
   join() {
@@ -54,6 +59,7 @@ export default class App extends Component<Props> {
     socket.on('offer', this.handleOffer)
     socket.on('answer', this.handleAnswer)
     socket.on('icecandidate', this.handleIceCandidate)
+    socket.on('beleft', this.handleBeLeft)
   }
 
   async call() {
@@ -64,6 +70,17 @@ export default class App extends Component<Props> {
     } catch (error) {
       Alert.alert(error)
     }
+  }
+
+  leave() {
+    pc.close()
+    socket.emit('leave', this.state.room_name)
+    this.setState({
+      local_stream_url: '',
+      remote_stream_url: '',
+      leave_disabled: true,
+      join_disabled: this.state.room_name ? false : true
+    })
   }
 
   async handleJoinSuccess() {
@@ -81,7 +98,6 @@ export default class App extends Component<Props> {
         },
         audio: true
       })
-      Alert.alert('info', stream.toURL())
       this.setState({local_stream_url: stream.toURL()})
       pc.addStream(stream)
     } catch (error) {
@@ -94,7 +110,9 @@ export default class App extends Component<Props> {
     pc.onaddstream = e => {
       const url = e.stream.toURL()
       this.setState({
-        remote_stream_url: e.stream.toURL()
+        remote_stream_url: e.stream.toURL(),
+        call_disabled: true,
+        leave_disabled: false
       })
     }
   }
@@ -120,12 +138,23 @@ export default class App extends Component<Props> {
     })
   }
 
+  handleBeLeft(roomId) {
+    socket.emit('beleft', roomId)
+    this.setState({
+      local_stream_url: '',
+      remote_stream_url: '',
+      leave_disabled: true,
+      join_disabled: this.state.room_name ? false : true
+    })
+  }
+
   render() {
     return (
       <View style={styles.container}>
         <TextInput onChangeText={text => {text ? this.setState({room_name: text, join_disabled: false}) : ''}} />
         <Button title="join" disabled={this.state.join_disabled} onPress={this.join} />
         <Button title="call" disabled={this.state.call_disabled} onPress={this.call} />
+        <Button title="leave" disabled={this.state.leave_disabled} onPress={this.leave} />
         <View style={styles.videos}>
           <RTCView style={styles.localVideo} streamURL={this.state.local_stream_url} />
           <RTCView style={styles.remoteVideo} streamURL={this.state.remote_stream_url} />
