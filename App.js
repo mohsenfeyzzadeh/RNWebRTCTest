@@ -38,6 +38,7 @@ export default class App extends Component<Props> {
       call_disabled: true,
       leave_disabled: true,
       room_name: '',
+      local_stream: null,
       local_stream_url: '',
       remote_stream_url: ''
     }
@@ -74,6 +75,9 @@ export default class App extends Component<Props> {
 
   leave() {
     pc.close()
+    this.state.local_stream.getTracks().forEach(track => {
+      track.stop()
+    })
     socket.emit('leave', this.state.room_name)
     this.setState({
       local_stream_url: '',
@@ -98,7 +102,7 @@ export default class App extends Component<Props> {
         },
         audio: true
       })
-      this.setState({local_stream_url: stream.toURL()})
+      this.setState({local_stream: stream, local_stream_url: stream.toURL()})
       pc.addStream(stream)
     } catch (error) {
       Alert.alert('error', error)
@@ -139,6 +143,10 @@ export default class App extends Component<Props> {
   }
 
   handleBeLeft(roomId) {
+    pc.close()
+    this.state.local_stream.getTracks().forEach(track => {
+      track.stop()
+    })
     socket.emit('beleft', roomId)
     this.setState({
       local_stream_url: '',
